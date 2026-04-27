@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+  <title>Bel Mawr - Review Entries</title>
+  <style>
+    :root{--green:#2D6A4F;--green-light:#D8F3DC;--red:#D32F2F;--gray-100:#F0EDE8;--gray-200:#DDD9D2;--gray-300:#C4BFB6;--gray-500:#6B6760;--gray-800:#2C2926;--radius:14px;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#FAF8F5;color:var(--gray-800);min-height:100dvh;padding:16px;max-width:500px;margin:0 auto;}
+    h1{font-size:20px;font-weight:800;text-align:center;margin-bottom:12px;color:var(--green);}
+    .search{width:100%;padding:12px;border-radius:10px;border:2px solid var(--gray-300);font-size:15px;margin-bottom:12px;}
+    .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+    .filter-btn{padding:6px 12px;border-radius:8px;border:2px solid var(--gray-300);background:#fff;font-size:12px;font-weight:600;cursor:pointer;}
+    .filter-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+    .card{background:#fff;border-radius:var(--radius);padding:14px;margin-bottom:10px;border:2px solid var(--gray-200);box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+    .card-addr{font-size:16px;font-weight:800;}
+    .card-rank{background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;}
+    .card-rank.r1{background:#FFEBEE;color:var(--red);}
+    .card-row{font-size:13px;color:var(--gray-500);margin-top:3px;}
+    .card-desc{font-size:14px;font-weight:600;margin-top:6px;}
+    .card-actions{display:flex;gap:8px;margin-top:8px;}
+    .card-btn{padding:6px 12px;border-radius:8px;border:2px solid var(--gray-300);background:#fff;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;color:var(--gray-800);}
+    .count{text-align:center;font-size:13px;color:var(--gray-500);margin-bottom:10px;}
+    .back-link{display:block;text-align:center;margin-top:16px;color:var(--green);font-weight:700;text-decoration:none;}
+  </style>
+</head>
+<body>
+  <h1>Bel Mawr - Review</h1>
+  <input type="text" class="search" id="search" placeholder="Search by address...">
+  <div class="filters" id="filters"></div>
+  <div class="count" id="count">Loading...</div>
+  <div id="cards"></div>
+  <a href="/" class="back-link">Back to Logger</a>
+  <script>
+    let allEntries=[],activeFilter='';
+    const CATEGORIES=["Sewer","Gutter/Downspouts","Bees/Hornets","Front Door/Entry Way","Landscaping","Sidewalk","Driveway","Garage","Paint","Deck","Dryer Vent","Siding"];
+
+    async function load(){
+      try{
+        const r=await fetch('/api/review');const d=await r.json();
+        allEntries=d.entries||[];
+        buildFilters();render();
+      }catch(e){document.getElementById('count').textContent='Error loading: '+e.message;}
+    }
+
+    function buildFilters(){
+      const f=document.getElementById('filters');
+      f.innerHTML='<button class="filter-btn active" data-cat="">All</button>';
+      CATEGORIES.forEach(c=>{
+        const b=document.createElement('button');b.className='filter-btn';b.dataset.cat=c;b.textContent=c;f.appendChild(b);
+      });
+      f.onclick=e=>{
+        if(!e.target.classList.contains('filter-btn'))return;
+        f.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+        e.target.classList.add('active');
+        activeFilter=e.target.dataset.cat;render();
+      };
+    }
+
+    function render(){
+      const q=document.getElementById('search').value.toLowerCase();
+      const filtered=allEntries.filter(e=>{
+        const addr=(e['ADDRESS']||e['Address']||'').toLowerCase();
+        const cat=(e['CATEGORY']||e['Category']||'');
+        if(q&&!addr.includes(q))return false;
+        if(activeFilter&&cat!==activeFilter)return false;
+        return true;
+      });
+      document.getElementById('count').textContent=filtered.length+' entries';
+      const cards=document.getElementById('cards');
+      cards.innerHTML=filtered.map(e=>{
+        const addr=e['ADDRESS']||e['Address']||'—';
+        const loc=e['LOCATION']||e['Location']||'';
+        const rank=e['RANK 1-4']||e['Rank']||'';
+        const cat=e['CATEGORY']||e['Category']||'';
+        const opRes=e['OPERATING OR RESERVE']||e['Op/Res']||'';
+        const desc=e['DESCRIPTION']||e['Description']||'';
+        const date=e['DATE ENTERED']||e['Date']||'';
+        const photoUrl=e._photoUrl||'';
+        const rankClass=rank==='1'?'r1':'';
+        let actions='';
+        if(photoUrl)actions+=`<a href="${photoUrl}" target="_blank" class="card-btn">View Photos</a>`;
+        return `<div class="card">
+          <div class="card-header"><span class="card-addr">${addr}</span>${rank?`<span class="card-rank ${rankClass}">Rank ${rank}</span>`:''}</div>
+          ${loc?`<div class="card-row">Location: ${loc}</div>`:''}
+          ${cat?`<div class="card-row">Category: ${cat}</div>`:''}
+          ${opRes?`<div class="card-row">${opRes}</div>`:''}
+          ${date?`<div class="card-row">${date}</div>`:''}
+          ${desc?`<div class="card-desc">${desc}</div>`:''}
+          ${actions?`<div class="card-actions">${actions}</div>`:''}
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('search').oninput=render;
+    load();
+  </script>
+</body>
+</html>

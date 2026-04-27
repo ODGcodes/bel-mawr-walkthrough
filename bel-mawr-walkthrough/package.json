@@ -1,0 +1,8 @@
+{
+  "name": "bel-mawr-walkthrough",
+  "version": "1.0.0",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "jose": "^5.2.0"
+  }
+}

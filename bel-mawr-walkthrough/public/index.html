@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Bel Mawr Walkthrough</title>
+  <style>
+    :root{--green:#2D6A4F;--green-light:#D8F3DC;--green-mid:#74C69D;--red:#D32F2F;--red-light:#FFEBEE;--gray-100:#F0EDE8;--gray-200:#DDD9D2;--gray-300:#C4BFB6;--gray-500:#6B6760;--gray-800:#2C2926;--radius:14px;--shadow:0 2px 8px rgba(0,0,0,0.08);}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#FAF8F5;color:var(--gray-800);min-height:100dvh;padding:16px;max-width:420px;margin:0 auto;}
+    h1{font-size:22px;font-weight:800;letter-spacing:-0.3px;text-align:center;margin-bottom:4px;color:var(--green);}
+    .subtitle{text-align:center;font-size:13px;color:var(--gray-500);margin-bottom:16px;}
+    .field-guide{background:var(--gray-100);border-radius:12px;padding:14px 16px;border:2px solid var(--gray-300);}
+    .field-guide-title{font-size:15px;font-weight:700;color:var(--gray-800);margin-bottom:8px;}
+    .field-row{display:flex;align-items:baseline;gap:8px;padding:5px 0;font-size:14px;line-height:1.5;flex-wrap:wrap;}
+    .field-icon{flex-shrink:0;width:20px;text-align:center;font-size:14px;}
+    .field-label{font-weight:700;color:var(--gray-800);white-space:nowrap;min-width:80px;}
+    .field-hint{color:var(--gray-800);font-size:13px;font-weight:500;}
+    .field-hint.cats{font-size:13px;line-height:1.6;font-weight:600;color:var(--gray-800);}
+    .status-banner{display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:var(--radius);background:var(--gray-100);border:2px solid var(--gray-300);transition:all 0.4s ease;max-width:100%;}
+    .status-banner.listening{background:var(--green-light);border-color:var(--green-mid);}
+    .status-banner.error{background:var(--red-light);border-color:var(--red);}
+    .status-dot{width:14px;height:14px;border-radius:50%;background:var(--gray-300);flex-shrink:0;transition:background 0.3s;}
+    .listening .status-dot{background:var(--green);animation:pulse 1.5s infinite;}
+    .error .status-dot{background:var(--red);}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+    .status-text{flex:1;min-width:0;}
+    .status-label{font-size:16px;font-weight:700;display:block;}
+    .status-detail{font-size:13px;color:var(--gray-500);display:block;margin-top:2px;word-break:break-word;}
+    .btn-row{display:flex;gap:10px;margin-top:14px;}
+    .btn{flex:1;padding:16px;border-radius:var(--radius);border:none;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.15s;text-align:center;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:disabled{background:var(--gray-300);color:var(--gray-500);cursor:not-allowed;}
+    .btn-secondary{background:var(--gray-200);color:var(--gray-800);}
+    .btn-danger{background:var(--red);color:#fff;}
+    .timer{text-align:center;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--gray-800);margin-top:10px;min-height:36px;}
+    .section{margin-top:16px;}
+    .section-title{font-size:14px;font-weight:700;color:var(--gray-500);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
+    .photo-panel{background:var(--gray-100);border-radius:var(--radius);padding:16px;border:2px solid var(--gray-300);}
+    .photo-field{margin-bottom:12px;}
+    .photo-field label{display:block;font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:4px;}
+    .photo-field input,.photo-field select{width:100%;padding:10px;border-radius:8px;border:2px solid var(--gray-300);font-size:15px;background:#fff;}
+    .photo-btn-row{display:flex;gap:8px;margin-top:10px;}
+    .photo-btn{flex:1;padding:12px;border-radius:10px;border:2px solid var(--gray-300);background:#fff;font-size:14px;font-weight:700;cursor:pointer;text-align:center;}
+    .photo-btn:active{background:var(--gray-200);}
+    .photo-status{margin-top:10px;font-size:13px;color:var(--gray-500);text-align:center;min-height:18px;}
+    .debug-log{margin-top:10px;padding:10px;background:#1a1a1a;color:#0f0;font-family:monospace;font-size:11px;border-radius:8px;max-height:120px;overflow-y:auto;display:none;word-break:break-all;}
+    .debug-log.visible{display:block;}
+    .instructions{background:var(--gray-100);border-radius:var(--radius);padding:14px 16px;margin-top:16px;border:2px solid var(--gray-300);}
+    .instructions summary{font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;}
+    .instructions p{font-size:13px;color:var(--gray-500);margin-top:8px;line-height:1.5;}
+    .instructions code{background:var(--gray-200);padding:2px 5px;border-radius:4px;font-size:12px;}
+  </style>
+</head>
+<body>
+  <h1>Bel Mawr Walkthrough</h1>
+  <div class="subtitle" id="reviewerLine">Loading...</div>
+
+  <div class="status-banner" id="statusBanner">
+    <div class="status-dot"></div>
+    <div class="status-text">
+      <span class="status-label" id="statusLabel">Ready</span>
+      <span class="status-detail" id="statusDetail">Tap Start to begin</span>
+    </div>
+  </div>
+  <div class="timer" id="timer"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" id="startBtn">Start Walkthrough</button>
+    <button class="btn btn-danger" id="stopBtn" style="display:none;">End</button>
+  </div>
+
+  <div class="section">
+    <div class="field-guide">
+      <div class="field-guide-title">Tell the assistant:</div>
+      <div class="field-row"><span class="field-icon">📍</span><span class="field-label">ADDRESS</span><span class="field-hint">Street number</span></div>
+      <div class="field-row"><span class="field-icon">📌</span><span class="field-label">LOCATION</span><span class="field-hint">front, rear, side (N/S/E/W), corner (NE/NW/SE/SW)</span></div>
+      <div class="field-row"><span class="field-icon">⚡</span><span class="field-label">RANK 1-4</span><span class="field-hint">1=urgent · 2=this yr · 3=next yr · 4=later</span></div>
+      <div class="field-row"><span class="field-icon">📋</span><span class="field-label">CATEGORY</span><span class="field-hint cats">Sewer · Gutter/Downspouts · Bees/Hornets · Front Door/Entry Way · Landscaping · Sidewalk · Driveway · Garage · Paint · Deck · Dryer Vent · Siding</span></div>
+      <div class="field-row"><span class="field-icon">💰</span><span class="field-label">OPER / RESERVE</span><span class="field-hint">Operating or Reserve</span></div>
+      <div class="field-row"><span class="field-icon">📝</span><span class="field-label">DESCRIPTION</span><span class="field-hint">What needs to be done (15 words max)</span></div>
+    </div>
+  </div>
+
+  <!-- Photo upload -->
+  <div class="section">
+    <div class="section-title">Add Photo</div>
+    <div class="photo-panel" id="photoPanel">
+      <div class="photo-field"><label>Address</label><input type="text" id="photoAddr" placeholder="e.g., 123"></div>
+      <div class="photo-field">
+        <label>Category</label>
+        <select id="photoCat"><option value="">Select...</option></select>
+      </div>
+      <div class="photo-btn-row">
+        <button class="photo-btn" id="takePhotoBtn">Take Photo</button>
+        <button class="photo-btn" id="galleryBtn">Gallery</button>
+      </div>
+      <button class="btn btn-primary" id="uploadBtn" style="margin-top:10px;width:100%;display:none;">Upload</button>
+      <div class="photo-status" id="photoStatus"></div>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="galleryInput" accept="image/*" style="display:none;">
+    </div>
+  </div>
+
+  <!-- Review button -->
+  <div class="btn-row" style="margin-top:16px;">
+    <a href="/review.html" class="btn btn-secondary" style="text-decoration:none;">Review Entries</a>
+  </div>
+
+  <details class="instructions">
+    <summary>How to use</summary>
+    <p>1. Tap <strong>Start Walkthrough</strong> and allow microphone access.<br>
+    2. The assistant asks for each field one at a time.<br>
+    3. Answer each question. Say "skip" if you don't have an answer.<br>
+    4. After all fields, the assistant reads back your entry.<br>
+    5. Say "yes" to log it.<br>
+    6. Say "done" when finished.</p>
+  </details>
+
+  <div class="debug-log" id="debugLog"></div>
+
+  <script src="https://cdn.jsdelivr.net/gh/balacodeio/Vapi-Web-UMD@latest/dist/latest/vapi-web-bundle.min.js"></script>
+  <script>
+    const VAPI_PUBLIC_KEY='31654b18-d9a7-4ded-b324-8f6d22c7fd1d';
+    const ASSISTANT_ID='a890a640-06b1-4170-bac9-8928bb37dcc3';
+    const CATEGORIES=["Sewer","Gutter/Downspouts","Bees/Hornets","Front Door/Entry Way","Landscaping","Sidewalk","Driveway","Garage","Paint","Deck","Dryer Vent","Siding"];
+
+    const startBtn=document.getElementById("startBtn"),stopBtn=document.getElementById("stopBtn"),statusLabel=document.getElementById("statusLabel"),statusDetail=document.getElementById("statusDetail"),statusBanner=document.getElementById("statusBanner"),timerEl=document.getElementById("timer"),debugLog=document.getElementById("debugLog"),reviewerLine=document.getElementById("reviewerLine"),manualCategory=document.getElementById("photoCat"),photoAddr=document.getElementById("photoAddr");
+    CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;manualCategory.appendChild(o);});
+
+    let vapi=null,callActive=false,timerInterval=null,callStart=null,selectedFile=null;
+
+    function log(msg){debugLog.textContent+=new Date().toLocaleTimeString()+' '+msg+'\n';debugLog.scrollTop=debugLog.scrollHeight;debugLog.classList.add("visible");}
+    function setStatus(cls,label,detail){statusBanner.className='status-banner'+(cls?' '+cls:'');statusLabel.textContent=label;statusDetail.textContent=detail||'';}
+    function startTimer(){callStart=Date.now();timerInterval=setInterval(()=>{const s=Math.floor((Date.now()-callStart)/1000);const m=Math.floor(s/60);timerEl.textContent=String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');},1000);}
+    function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
+
+    // Gwen is the only user - no reviewer needed
+    reviewerLine.textContent = 'Bel Mawr Condominium Association';
+
+    try{
+      vapi=new window.Vapi(VAPI_PUBLIC_KEY);
+      vapi.on('call-start',()=>{callActive=true;setStatus('listening','Listening...','Speak now');startBtn.style.display='none';stopBtn.style.display='block';startTimer();});
+      vapi.on('call-end',()=>{callActive=false;setStatus('','Call ended','');startBtn.style.display='block';startBtn.disabled=false;stopBtn.style.display='none';stopTimer();});
+      vapi.on('speech-start',()=>{if(callActive)setStatus('listening','Listening...','');});
+      vapi.on('speech-end',()=>{if(callActive)setStatus('listening','Processing...','');});
+      vapi.on('error',(e)=>{
+        const msg=e?.message||JSON.stringify(e)||'';
+        if(msg.includes('Meeting has ended')||msg.includes('room')||msg.includes('cleanup'))return;
+        log('Error: '+msg);
+        if(!callActive)setStatus('error','Error',msg);
+      });
+    }catch(e){log('Vapi init failed: '+e.message);setStatus('error','Vapi failed',e.message);}
+
+    startBtn.onclick=async()=>{
+      if(!vapi){log("Vapi not init");return;}
+      setStatus("","Connecting...","");
+      startBtn.disabled=true;timerEl.textContent="";debugLog.classList.remove("visible");debugLog.textContent="";
+      try{
+        await navigator.mediaDevices.getUserMedia({audio:true});
+      }catch(micErr){
+        setStatus("error","Microphone blocked","Tap the lock icon in your address bar and allow microphone access, then try again.");
+        startBtn.disabled=false;
+        return;
+      }
+      try{await vapi.start(ASSISTANT_ID);}
+      catch(err){
+        const msg=err?.message||JSON.stringify(err);
+        if(msg.includes("microphone")||msg.includes("NotAllowed")||msg.includes("Permission")){
+          setStatus("error","Microphone blocked","Allow microphone access and try again.");
+        }else{
+          log("Start failed: "+msg);setStatus("error","Could not connect","Check your internet connection and try again.");
+        }
+        startBtn.disabled=false;
+      }
+    };
+
+    stopBtn.onclick=()=>{if(vapi&&callActive){vapi.stop();callActive=false;}};
+
+    // Photo upload logic
+    const cameraInput=document.getElementById('cameraInput'),galleryInput=document.getElementById('galleryInput'),uploadBtn=document.getElementById('uploadBtn'),photoStatus=document.getElementById('photoStatus');
+    document.getElementById('takePhotoBtn').onclick=()=>cameraInput.click();
+    document.getElementById('galleryBtn').onclick=()=>galleryInput.click();
+
+    function handleFileSelect(e){
+      selectedFile=e.target.files[0];
+      if(selectedFile){uploadBtn.style.display='block';photoStatus.textContent='Photo selected: '+selectedFile.name;}
+    }
+    cameraInput.onchange=handleFileSelect;
+    galleryInput.onchange=handleFileSelect;
+
+    uploadBtn.onclick=async()=>{
+      if(!selectedFile){photoStatus.textContent='No photo selected';return;}
+      photoStatus.textContent='Compressing...';
+      uploadBtn.disabled=true;
+
+      try{
+        let base64Data;
+        if(selectedFile.size>2*1024*1024){
+          const img=new Image();
+          const url=URL.createObjectURL(selectedFile);
+          await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+          const canvas=document.createElement('canvas');
+          let w=img.width,h=img.height;
+          const maxDim=1200;
+          if(w>maxDim||h>maxDim){if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}else{w=Math.round(w*maxDim/h);h=maxDim;}}
+          canvas.width=w;canvas.height=h;
+          canvas.getContext('2d').drawImage(img,0,0,w,h);
+          const dataUrl=canvas.toDataURL('image/jpeg',0.75);
+          base64Data=dataUrl.split(',')[1];
+          URL.revokeObjectURL(url);
+        }else{
+          base64Data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Read failed'));r.readAsDataURL(selectedFile);});
+        }
+
+        const addr=photoAddr.value.trim();
+        const cat=manualCategory.value;
+        const photoName=`${cat||'General'}-${addr||'unknown'}-${Date.now()}.jpg`;
+
+        photoStatus.textContent='Uploading...';
+        const resp=await fetch('/api/photos',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({photoName,fileBase64:base64Data,fileMimeType:'image/jpeg',address:addr,category:cat,timestamp:new Date().toISOString()})
+        });
+        const result=await resp.json();
+        if(result.success){
+          photoStatus.textContent='Uploaded successfully!';
+          selectedFile=null;uploadBtn.style.display='none';
+          cameraInput.value='';galleryInput.value='';
+        }else{
+          photoStatus.textContent='Upload failed: '+(result.error||'Unknown error');
+        }
+      }catch(err){
+        photoStatus.textContent='Upload error: '+err.message;
+      }
+      uploadBtn.disabled=false;
+    };
+  </script>
+</body>
+</html>
