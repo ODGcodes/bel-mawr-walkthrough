@@ -157,14 +157,14 @@
       });
     }
 
-    // Also load entries from Google Sheet on page load
+    // Also load entries from Google Sheet on page load (last 5 only)
     async function loadExistingEntries(){
       try{
         const r=await fetch('/api/review');
         const d=await r.json();
         if(d.entries&&d.entries.length>0){
-          loggedEntries=d.entries.map(e=>{
-            // Find values by partial key match to handle trailing spaces in headers
+          const recent=d.entries.slice(-5);
+          loggedEntries=recent.map(e=>{
             const keys=Object.keys(e);
             const findVal=(search)=>{const k=keys.find(k=>k.trim().toUpperCase()===search);return k?e[k]:'';};
             return {
