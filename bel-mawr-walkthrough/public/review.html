@@ -62,8 +62,10 @@
     function render(){
       const q=document.getElementById('search').value.toLowerCase();
       const filtered=allEntries.filter(e=>{
-        const addr=(e['ADDRESS']||e['Address']||'').toLowerCase();
-        const cat=(e['CATEGORY']||e['Category']||'');
+        const keys=Object.keys(e);
+        const findVal=(search)=>{const k=keys.find(k=>k.trim().toUpperCase()===search);return k?(e[k]||''):'';};
+        const addr=findVal('ADDRESS').toLowerCase();
+        const cat=findVal('CATEGORY');
         if(q&&!addr.includes(q))return false;
         if(activeFilter&&cat!==activeFilter)return false;
         return true;
@@ -71,13 +73,15 @@
       document.getElementById('count').textContent=filtered.length+' entries';
       const cards=document.getElementById('cards');
       cards.innerHTML=filtered.map(e=>{
-        const addr=e['ADDRESS']||e['Address']||'—';
-        const loc=e['LOCATION']||e['Location']||'';
-        const rank=e['RANK 1-4']||e['Rank']||'';
-        const cat=e['CATEGORY']||e['Category']||'';
-        const opRes=e['OPERATING OR RESERVE']||e['Op/Res']||'';
-        const desc=e['DESCRIPTION']||e['Description']||'';
-        const date=e['DATE ENTERED']||e['Date']||'';
+        const keys=Object.keys(e);
+        const findVal=(search)=>{const k=keys.find(k=>k.trim().toUpperCase()===search);return k?(e[k]||''):'';};
+        const addr=findVal('ADDRESS')||'—';
+        const loc=findVal('LOCATION');
+        const rank=findVal('RANK 1-4');
+        const cat=findVal('CATEGORY');
+        const opRes=findVal('OPERATING RESERVE');
+        const desc=findVal('DESCRIPTION');
+        const date=findVal('DATE ENTERED');
         const photoUrl=e._photoUrl||'';
         const rankClass=rank==='1'?'r1':'';
         let actions='';

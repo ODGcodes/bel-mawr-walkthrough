@@ -48,6 +48,10 @@
     .photo-status{margin-top:10px;font-size:13px;color:var(--gray-500);text-align:center;min-height:18px;}
     .debug-log{margin-top:10px;padding:10px;background:#1a1a1a;color:#0f0;font-family:monospace;font-size:11px;border-radius:8px;max-height:120px;overflow-y:auto;display:none;word-break:break-all;}
     .debug-log.visible{display:block;}
+    .entry-item{padding:10px 12px;background:#fff;border:2px solid var(--gray-300);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:14px;font-weight:600;}
+    .entry-item:active{background:var(--green-light);border-color:var(--green);}
+    .entry-item .entry-cat{font-size:12px;font-weight:500;color:var(--gray-500);}
+    .entry-list-title{font-size:13px;font-weight:700;color:var(--gray-500);margin-bottom:6px;}
     .instructions{background:var(--gray-100);border-radius:var(--radius);padding:14px 16px;margin-top:16px;border:2px solid var(--gray-300);}
     .instructions summary{font-size:14px;font-weight:700;color:var(--gray-800);cursor:pointer;}
     .instructions p{font-size:13px;color:var(--gray-500);margin-top:8px;line-height:1.5;}
@@ -93,6 +97,7 @@
         <label>Category</label>
         <select id="photoCat"><option value="">Select...</option></select>
       </div>
+      <div id="entryList" style="margin-top:10px;"></div>
       <div class="photo-btn-row">
         <button class="photo-btn" id="takePhotoBtn">Take Photo</button>
         <button class="photo-btn" id="galleryBtn">Gallery</button>
@@ -131,11 +136,48 @@
     CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;manualCategory.appendChild(o);});
 
     let vapi=null,callActive=false,timerInterval=null,callStart=null,selectedFile=null;
+    let loggedEntries=[];
 
     function log(msg){debugLog.textContent+=new Date().toLocaleTimeString()+' '+msg+'\n';debugLog.scrollTop=debugLog.scrollHeight;debugLog.classList.add("visible");}
     function setStatus(cls,label,detail){statusBanner.className='status-banner'+(cls?' '+cls:'');statusLabel.textContent=label;statusDetail.textContent=detail||'';}
     function startTimer(){callStart=Date.now();timerInterval=setInterval(()=>{const s=Math.floor((Date.now()-callStart)/1000);const m=Math.floor(s/60);timerEl.textContent=String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');},1000);}
     function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
+
+    function renderEntryList(){
+      const el=document.getElementById('entryList');
+      if(loggedEntries.length===0){el.innerHTML='';return;}
+      el.innerHTML='<div class="entry-list-title">Tap an entry to attach a photo:</div>'+
+        loggedEntries.map((e,i)=>`<div class="entry-item" data-idx="${i}">${e.address||'No address'} <span class="entry-cat">${e.category||''}</span></div>`).join('');
+      el.querySelectorAll('.entry-item').forEach(item=>{
+        item.onclick=()=>{
+          const e=loggedEntries[item.dataset.idx];
+          photoAddr.value=e.address||'';
+          if(e.category){manualCategory.value=e.category;}
+        };
+      });
+    }
+
+    // Also load entries from Google Sheet on page load
+    async function loadExistingEntries(){
+      try{
+        const r=await fetch('/api/review');
+        const d=await r.json();
+        if(d.entries&&d.entries.length>0){
+          loggedEntries=d.entries.map(e=>{
+            // Find values by partial key match to handle trailing spaces in headers
+            const keys=Object.keys(e);
+            const findVal=(search)=>{const k=keys.find(k=>k.trim().toUpperCase()===search);return k?e[k]:'';};
+            return {
+              address:findVal('ADDRESS'),
+              category:findVal('CATEGORY'),
+              description:findVal('DESCRIPTION')
+            };
+          });
+          renderEntryList();
+        }
+      }catch(e){}
+    }
+    loadExistingEntries();
 
     // Gwen is the only user - no reviewer needed
     reviewerLine.textContent = 'Bel Mawr Condominium Association';
@@ -151,6 +193,22 @@
         if(msg.includes('Meeting has ended')||msg.includes('room')||msg.includes('cleanup'))return;
         log('Error: '+msg);
         if(!callActive)setStatus('error','Error',msg);
+      });
+      vapi.on('message',(m)=>{
+        // Capture tool call arguments when an entry is logged
+        if(m.type==='tool-calls'){
+          try{
+            const calls=m.toolCalls||m.toolCallList||[];
+            calls.forEach(tc=>{
+              let args=tc.function?.arguments||tc.arguments||{};
+              if(typeof args==='string')args=JSON.parse(args);
+              if(args.description){
+                loggedEntries.push({address:args.address||'',category:args.category||'',description:args.description||''});
+                renderEntryList();
+              }
+            });
+          }catch(e){}
+        }
       });
     }catch(e){log('Vapi init failed: '+e.message);setStatus('error','Vapi failed',e.message);}
 
