@@ -35,7 +35,7 @@
   <a href="/" class="back-link">Back to Logger</a>
   <script>
     let allEntries=[],activeFilter='';
-    const CATEGORIES=["Sewer","Gutter/Downspouts","Bees/Hornets","Front Door/Entry Way","Landscaping","Sidewalk","Driveway","Garage","Paint","Deck","Dryer Vent","Siding"];
+    const CATEGORIES=["Sewer","Gutter/Downspouts","Bees/Hornets","Front Door/Entry Way","Landscaping","Sidewalk","Driveway","Garage","Paint","Deck","Dryer Vent","Siding","Miscellaneous"];
 
     async function load(){
       try{
@@ -86,6 +86,7 @@
         const rankClass=rank==='1'?'r1':'';
         let actions='';
         if(photoUrl)actions+=`<a href="${photoUrl}" target="_blank" class="card-btn">View Photos</a>`;
+        actions+=`<a href="/?photoAddr=${encodeURIComponent(addr)}&photoCat=${encodeURIComponent(cat)}#photo" class="card-btn">Add Photo</a>`;
         return `<div class="card">
           <div class="card-header"><span class="card-addr">${addr}</span>${rank?`<span class="card-rank ${rankClass}">Rank ${rank}</span>`:''}</div>
           ${loc?`<div class="card-row">Location: ${loc}</div>`:''}

@@ -82,7 +82,7 @@
       <div class="field-row"><span class="field-icon">📍</span><span class="field-label">ADDRESS</span><span class="field-hint">Street number</span></div>
       <div class="field-row"><span class="field-icon">📌</span><span class="field-label">LOCATION</span><span class="field-hint">front, rear, side (N/S/E/W), corner (NE/NW/SE/SW)</span></div>
       <div class="field-row"><span class="field-icon">⚡</span><span class="field-label">RANK 1-4</span><span class="field-hint">1=urgent · 2=this yr · 3=next yr · 4=later</span></div>
-      <div class="field-row"><span class="field-icon">📋</span><span class="field-label">CATEGORY</span><span class="field-hint cats">Sewer · Gutter/Downspouts · Bees/Hornets · Front Door/Entry Way · Landscaping · Sidewalk · Driveway · Garage · Paint · Deck · Dryer Vent · Siding</span></div>
+      <div class="field-row"><span class="field-icon">📋</span><span class="field-label">CATEGORY</span><span class="field-hint cats">Sewer · Gutter/Downspouts · Bees/Hornets · Front Door/Entry Way · Landscaping · Sidewalk · Driveway · Garage · Paint · Deck · Dryer Vent · Siding · Miscellaneous</span></div>
       <div class="field-row"><span class="field-icon">💰</span><span class="field-label">OPER / RES / OWNER</span><span class="field-hint">Operating, Reserve, or Owner</span></div>
       <div class="field-row"><span class="field-icon">📝</span><span class="field-label">DESCRIPTION</span><span class="field-hint">What needs to be done (15 words max)</span></div>
     </div>
@@ -130,7 +130,7 @@
   <script>
     const VAPI_PUBLIC_KEY='31654b18-d9a7-4ded-b324-8f6d22c7fd1d';
     const ASSISTANT_ID='a890a640-06b1-4170-bac9-8928bb37dcc3';
-    const CATEGORIES=["Sewer","Gutter/Downspouts","Bees/Hornets","Front Door/Entry Way","Landscaping","Sidewalk","Driveway","Garage","Paint","Deck","Dryer Vent","Siding"];
+    const CATEGORIES=["Sewer","Gutter/Downspouts","Bees/Hornets","Front Door/Entry Way","Landscaping","Sidewalk","Driveway","Garage","Paint","Deck","Dryer Vent","Siding","Miscellaneous"];
 
     const startBtn=document.getElementById("startBtn"),stopBtn=document.getElementById("stopBtn"),statusLabel=document.getElementById("statusLabel"),statusDetail=document.getElementById("statusDetail"),statusBanner=document.getElementById("statusBanner"),timerEl=document.getElementById("timer"),debugLog=document.getElementById("debugLog"),reviewerLine=document.getElementById("reviewerLine"),manualCategory=document.getElementById("photoCat"),photoAddr=document.getElementById("photoAddr");
     CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;manualCategory.appendChild(o);});
@@ -296,6 +296,18 @@
       }
       uploadBtn.disabled=false;
     };
+
+    // Pre-fill photo panel from review page links
+    const urlParams=new URLSearchParams(window.location.search);
+    const prefillAddr=urlParams.get('photoAddr');
+    const prefillCat=urlParams.get('photoCat');
+    if(prefillAddr||prefillCat||window.location.hash==='#photo'){
+      setTimeout(()=>{
+        if(prefillAddr)photoAddr.value=prefillAddr;
+        if(prefillCat)manualCategory.value=prefillCat;
+        document.getElementById('photoPanel').scrollIntoView({behavior:'smooth',block:'start'});
+      },500);
+    }
   </script>
 </body>
 </html>
