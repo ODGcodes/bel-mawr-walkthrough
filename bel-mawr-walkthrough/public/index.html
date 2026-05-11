@@ -49,7 +49,7 @@
     .debug-log{margin-top:10px;padding:10px;background:#1a1a1a;color:#0f0;font-family:monospace;font-size:11px;border-radius:8px;max-height:120px;overflow-y:auto;display:none;word-break:break-all;}
     .debug-log.visible{display:block;}
     .entry-item{padding:10px 12px;background:#fff;border:2px solid var(--gray-300);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:14px;font-weight:600;}
-    .entry-item:active{background:var(--green-light);border-color:var(--green);}
+    .entry-item:active,.entry-item.selected{background:var(--green-light);border-color:var(--green);}
     .entry-item .entry-cat{font-size:12px;font-weight:500;color:var(--gray-500);}
     .entry-list-title{font-size:13px;font-weight:700;color:var(--gray-500);margin-bottom:6px;}
     .instructions{background:var(--gray-100);border-radius:var(--radius);padding:14px 16px;margin-top:16px;border:2px solid var(--gray-300);}
@@ -137,6 +137,7 @@
 
     let vapi=null,callActive=false,timerInterval=null,callStart=null,selectedFile=null;
     let loggedEntries=[];
+    let selectedEntryIdx=-1;
 
     function log(msg){debugLog.textContent+=new Date().toLocaleTimeString()+' '+msg+'\n';debugLog.scrollTop=debugLog.scrollHeight;debugLog.classList.add("visible");}
     function setStatus(cls,label,detail){statusBanner.className='status-banner'+(cls?' '+cls:'');statusLabel.textContent=label;statusDetail.textContent=detail||'';}
@@ -147,35 +148,41 @@
       const el=document.getElementById('entryList');
       if(loggedEntries.length===0){el.innerHTML='';return;}
       el.innerHTML='<div class="entry-list-title">Tap an entry to attach a photo:</div>'+
-        loggedEntries.map((e,i)=>`<div class="entry-item" data-idx="${i}">${e.address||'No address'} <span class="entry-cat">${e.category||''}</span></div>`).join('');
+        loggedEntries.map((e,i)=>`<div class="entry-item${i===selectedEntryIdx?' selected':''}" data-idx="${i}">${e.address||'No address'} <span class="entry-cat">${e.category||''}</span>${e.rowNumber?' (row '+e.rowNumber+')':''}</div>`).join('');
       el.querySelectorAll('.entry-item').forEach(item=>{
         item.onclick=()=>{
-          const e=loggedEntries[item.dataset.idx];
+          selectedEntryIdx=parseInt(item.dataset.idx);
+          const e=loggedEntries[selectedEntryIdx];
           photoAddr.value=e.address||'';
           if(e.category){manualCategory.value=e.category;}
+          renderEntryList();
         };
       });
     }
 
-    // Also load entries from Google Sheet on page load (last 5 only)
-    async function loadExistingEntries(){
+    // Load entries from Google Sheet (capped at 6)
+    async function loadExistingEntries(limit){
       try{
         const r=await fetch('/api/review');
         const d=await r.json();
         if(d.entries&&d.entries.length>0){
-          const recent=d.entries.slice(-5);
+          const maxEntries=limit||6;
+          const recent=d.entries.slice(-maxEntries);
           loggedEntries=recent.map(e=>{
             const keys=Object.keys(e);
             const findVal=(search)=>{const k=keys.find(k=>k.trim().toUpperCase()===search);return k?e[k]:'';};
             return {
               address:findVal('ADDRESS'),
               category:findVal('CATEGORY'),
-              description:findVal('DESCRIPTION')
+              description:findVal('DESCRIPTION'),
+              rowNumber:e.rowNumber||'',
+              fromSheet:true
             };
           });
+          selectedEntryIdx=-1;
           renderEntryList();
         }
-      }catch(e){}
+      }catch(e){console.log('[BM] Could not load existing entries:',e);}
     }
     loadExistingEntries();
 
@@ -185,7 +192,13 @@
     try{
       vapi=new window.Vapi(VAPI_PUBLIC_KEY);
       vapi.on('call-start',()=>{callActive=true;setStatus('listening','Listening...','Speak now');startBtn.style.display='none';stopBtn.style.display='block';startTimer();});
-      vapi.on('call-end',()=>{callActive=false;setStatus('','Call ended','');startBtn.style.display='block';startBtn.disabled=false;stopBtn.style.display='none';stopTimer();});
+      vapi.on('call-end',()=>{callActive=false;setStatus('','Call ended','');startBtn.style.display='block';startBtn.disabled=false;stopBtn.style.display='none';stopTimer();
+        // Reload entries from sheet to get rowNumbers for voice-captured entries
+        setTimeout(()=>{
+          loggedEntries=[];selectedEntryIdx=-1;
+          loadExistingEntries(6);
+        },2000);
+      });
       vapi.on('speech-start',()=>{if(callActive)setStatus('listening','Listening...','');});
       vapi.on('speech-end',()=>{if(callActive)setStatus('listening','Processing...','');});
       vapi.on('error',(e)=>{
@@ -195,7 +208,6 @@
         if(!callActive)setStatus('error','Error',msg);
       });
       vapi.on('message',(m)=>{
-        // Capture tool call arguments when an entry is logged
         if(m.type==='tool-calls'){
           try{
             const calls=m.toolCalls||m.toolCallList||[];
@@ -203,7 +215,7 @@
               let args=tc.function?.arguments||tc.arguments||{};
               if(typeof args==='string')args=JSON.parse(args);
               if(args.description){
-                loggedEntries.push({address:args.address||'',category:args.category||'',description:args.description||''});
+                loggedEntries.push({address:args.address||'',category:args.category||'',description:args.description||'',rowNumber:''});
                 renderEntryList();
               }
             });
@@ -273,19 +285,22 @@
           base64Data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Read failed'));r.readAsDataURL(selectedFile);});
         }
 
-        const addr=photoAddr.value.trim();
-        const cat=manualCategory.value;
+        // Use selected entry data if available, otherwise use form fields
+        const entry=selectedEntryIdx>=0?loggedEntries[selectedEntryIdx]:null;
+        const addr=entry?entry.address:photoAddr.value.trim();
+        const cat=entry?entry.category:manualCategory.value;
+        const rowNum=entry?entry.rowNumber:'';
         const photoName=`${cat||'General'}-${addr||'unknown'}-${Date.now()}.jpg`;
 
         photoStatus.textContent='Uploading...';
         const resp=await fetch('/api/photos',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({photoName,fileBase64:base64Data,fileMimeType:'image/jpeg',address:addr,category:cat,timestamp:new Date().toISOString()})
+          body:JSON.stringify({photoName,fileBase64:base64Data,fileMimeType:'image/jpeg',address:addr,category:cat,rowNumber:rowNum,timestamp:new Date().toISOString()})
         });
         const result=await resp.json();
         if(result.success){
-          photoStatus.textContent='Uploaded successfully!';
+          photoStatus.textContent='Uploaded successfully!'+(result.sheet&&result.sheet.matched?' Linked to row '+result.sheet.row:'');
           selectedFile=null;uploadBtn.style.display='none';
           cameraInput.value='';galleryInput.value='';
         }else{
