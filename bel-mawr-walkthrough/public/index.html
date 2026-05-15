@@ -293,11 +293,15 @@
         const photoName=`${cat||'General'}-${addr||'unknown'}-${Date.now()}.jpg`;
 
         photoStatus.textContent='Uploading...';
+        const controller=new AbortController();
+        const uploadTimeout=setTimeout(()=>controller.abort(),20000);
         const resp=await fetch('/api/photos',{
           method:'POST',
+          signal:controller.signal,
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({photoName,fileBase64:base64Data,fileMimeType:'image/jpeg',address:addr,category:cat,rowNumber:rowNum,timestamp:new Date().toISOString()})
         });
+        clearTimeout(uploadTimeout);
         const result=await resp.json();
         if(result.success){
           photoStatus.textContent='Uploaded successfully!'+(result.sheet&&result.sheet.matched?' Linked to row '+result.sheet.row:'');
@@ -307,7 +311,8 @@
           photoStatus.textContent='Upload failed: '+(result.error||'Unknown error');
         }
       }catch(err){
-        photoStatus.textContent='Upload error: '+err.message;
+        const isTimeout=err?.name==='AbortError';
+        photoStatus.textContent=isTimeout?'Weak connection. Photo may already be saved. Check gallery before retrying.':'Upload error: '+err.message;
       }
       uploadBtn.disabled=false;
     };
