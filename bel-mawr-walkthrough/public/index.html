@@ -286,12 +286,39 @@
 
     uploadBtn.onclick=async()=>{
       if(!selectedFile){photoStatus.textContent='No photo selected';return;}
-      photoStatus.textContent='Compressing...';
+      console.log('[BM] Upload:', selectedFile.name, 'type:', selectedFile.type, 'size:', selectedFile.size);
+      photoStatus.textContent='Reading '+selectedFile.name+' ('+Math.round(selectedFile.size/1024)+'KB)...';
       uploadBtn.disabled=true;
 
       try{
         let base64Data;
-        if(selectedFile.size>2*1024*1024){
+        if(selectedFile.size < 2*1024*1024){
+          // Small files: FileReader first (most reliable for gallery photos)
+          const readResult=await new Promise((resolve,reject)=>{
+            const reader=new FileReader();
+            reader.onload=()=>{
+              console.log('[BM] FileReader success');
+              resolve(reader.result.split(',')[1]);
+            };
+            reader.onerror=(err)=>{
+              console.log('[BM] FileReader failed:', reader.error);
+              // Fallback: arrayBuffer
+              selectedFile.arrayBuffer().then(buf=>{
+                console.log('[BM] arrayBuffer success, size:', buf.byteLength);
+                const bytes=new Uint8Array(buf);
+                const chunks=[];
+                for(let i=0;i<bytes.length;i+=8192){chunks.push(String.fromCharCode.apply(null,bytes.subarray(i,i+8192)));}
+                resolve(btoa(chunks.join('')));
+              }).catch(e2=>{
+                console.log('[BM] arrayBuffer also failed:', e2);
+                reject(new Error('Cannot read file: '+selectedFile.name+' Type: '+selectedFile.type+' Size: '+selectedFile.size));
+              });
+            };
+            reader.readAsDataURL(selectedFile);
+          });
+          base64Data=readResult;
+        }else{
+          // Large files: canvas compression
           const img=new Image();
           const url=URL.createObjectURL(selectedFile);
           await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
@@ -304,8 +331,6 @@
           const dataUrl=canvas.toDataURL('image/jpeg',0.75);
           base64Data=dataUrl.split(',')[1];
           URL.revokeObjectURL(url);
-        }else{
-          base64Data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Read failed'));r.readAsDataURL(selectedFile);});
         }
 
         // Use selected entry data if available, otherwise use form fields
