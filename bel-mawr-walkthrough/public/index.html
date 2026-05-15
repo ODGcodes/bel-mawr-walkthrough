@@ -161,6 +161,28 @@
     }
 
     // Load entries from Google Sheet (capped at 6)
+    // Background fetch to get rowNumber for a just-logged entry
+    async function fetchRowNumber(entryIdx){
+      try{
+        const r=await fetch('/api/review');const d=await r.json();
+        if(d.entries&&d.entries.length>0){
+          const entry=loggedEntries[entryIdx];if(!entry)return;
+          for(let i=d.entries.length-1;i>=0;i--){
+            const se=d.entries[i];
+            const keys=Object.keys(se);
+            const findVal=(search)=>{const k=keys.find(k=>k.trim().toUpperCase()===search);return k?se[k]:'';};
+            const seAddr=findVal('ADDRESS').trim();
+            const seCat=findVal('CATEGORY').trim().toLowerCase();
+            if(seAddr===entry.address&&seCat===(entry.category||'').toLowerCase()){
+              loggedEntries[entryIdx].rowNumber=se.rowNumber||'';
+              console.log('[BM] Got rowNumber',se.rowNumber,'for entry',entryIdx);
+              renderEntryList();
+              break;
+            }
+          }
+        }
+      }catch(e){console.log('[BM] fetchRowNumber error:',e);}
+    }
     async function loadExistingEntries(limit){
       try{
         const r=await fetch('/api/review');
@@ -217,6 +239,7 @@
               if(args.description){
                 loggedEntries.push({address:args.address||'',category:args.category||'',description:args.description||'',rowNumber:''});
                 renderEntryList();
+                setTimeout(()=>fetchRowNumber(loggedEntries.length-1),1500);
               }
             });
           }catch(e){}
@@ -321,10 +344,18 @@
     const urlParams=new URLSearchParams(window.location.search);
     const prefillAddr=urlParams.get('photoAddr');
     const prefillCat=urlParams.get('photoCat');
-    if(prefillAddr||prefillCat||window.location.hash==='#photo'){
+    const prefillRow=urlParams.get('photoRow');
+    const prefillDesc=urlParams.get('photoDesc')?decodeURIComponent(urlParams.get('photoDesc')):'';
+    if(prefillAddr||prefillCat||prefillRow||window.location.hash==='#photo'){
       setTimeout(()=>{
         if(prefillAddr)photoAddr.value=prefillAddr;
         if(prefillCat)manualCategory.value=prefillCat;
+        // Create an entry with rowNumber so the upload links to the exact row
+        if(prefillRow||prefillAddr){
+          loggedEntries.push({address:prefillAddr||'',category:prefillCat||'',description:prefillDesc||'',rowNumber:prefillRow||'',fromSheet:true});
+          selectedEntryIdx=loggedEntries.length-1;
+          renderEntryList();
+        }
         document.getElementById('photoPanel').scrollIntoView({behavior:'smooth',block:'start'});
       },500);
     }
